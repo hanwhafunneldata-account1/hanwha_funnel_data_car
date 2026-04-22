@@ -2,125 +2,137 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime
 
 # 1. 페이지 설정
-st.set_page_config(page_title="한화손해보험 성과 대시보드", layout="wide")
+st.set_page_config(page_title="한화손해보험 대시보드", layout="wide")
 
-# 2. 로고 대체 디자인 및 커스텀 CSS
+# 2. 배경색 및 지표 박스 강제 스타일링 (다크 회색 테마)
 st.markdown("""
     <style>
-    /* 사이드바 최상단 한화 로고 텍스트 박스 */
-    .hanwha-logo {
-        background-color: #FF6600; /* 한화 오렌지 */
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        font-weight: bold;
-        font-size: 20px;
-        margin-bottom: 20px;
-        letter-spacing: 1px;
+    /* 전체 배경을 중간 회색톤으로 변경 */
+    .stApp {
+        background-color: #2B2B2B !important;
     }
     
-    /* KPI 박스 디자인 */
-    [data-testid="stMetric"] {
+    /* 사이드바 배경색 조정 */
+    [data-testid="stSidebar"] {
+        background-color: #1E1E1E !important;
+    }
+
+    /* 사이드바 한화 로고 박스 */
+    .hanwha-header {
+        background-color: #FF6600 !important;
+        color: white !important;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    /* KPI 메트릭 박스 (연한 오렌지 배경 - 회색 배경 위에서 눈에 띄게) */
+    div[data-testid="stMetric"] {
         background-color: #FFF5E6 !important;
+        border: 1px solid #FFCC80 !important;
         padding: 20px !important;
-        border-radius: 12px !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
-        border: 1px solid #FFE0B2 !important;
+        border-radius: 15px !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
     }
-    /* 글씨 색상 검정색 강제 고정 */
-    [data-testid="stMetricLabel"] {
-        color: #333333 !important;
-    }
-    [data-testid="stMetricValue"] div {
+    
+    /* KPI 내 모든 텍스트를 검정색으로 강제 (배경이 연한 오렌지이므로) */
+    div[data-testid="stMetricLabel"] > div {
         color: #000000 !important;
+        font-weight: bold !important;
+        font-size: 16px !important;
+    }
+    div[data-testid="stMetricValue"] > div {
+        color: #000000 !important;
+        font-weight: 800 !important;
+        font-size: 32px !important;
+    }
+    
+    /* 일반 텍스트 및 제목 색상 (회색 배경에 맞게 흰색/연회색으로) */
+    h1, h2, h3, p, .stMarkdown {
+        color: #FFFFFF !important;
+    }
+    
+    /* 탭 메뉴 텍스트 색상 */
+    button[data-baseweb="tab"] p {
+        color: #FFFFFF !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 사이드바에 텍스트 로고 배치 (이미지 차단 문제 해결)
-st.sidebar.markdown('<div class="hanwha-logo">Hanwha</div>', unsafe_allow_html=True)
-st.sidebar.markdown("### ⚙️ 대시보드 설정")
+# 3. 사이드바 구성
+st.sidebar.markdown('<div class="hanwha-header">HANWHA</div>', unsafe_allow_html=True)
+st.sidebar.info("자동차보험 전환율 분석 시스템")
 
-# 3. 데이터 로드 (기존 로직 동일)
+# 4. 데이터 로직
 @st.cache_data
-def load_data():
+def get_data():
+    import pandas as pd
+    import numpy as np
     dates = pd.date_range(start="2026-01-01", end="2026-04-21")
-    data = []
-    for date in dates:
-        is_month_end = date.day >= 25
-        renewal_base = 0.55 if is_month_end else 0.42
-        row = {
-            "날짜": date,
-            "신규_산출": 150 + (date.day % 10) * 5,
-            "신규_가입": 50 + (date.day % 10) * 2,
-            "갱신_산출": 450 + (date.day % 5) * 10,
-            "갱신_가입": int((450 + (date.day % 5) * 10) * (renewal_base + (date.day % 3) * 0.02))
-        }
-        data.append(row)
-    df = pd.DataFrame(data)
+    df = pd.DataFrame({
+        "날짜": dates,
+        "신규_산출": [150 + (i % 7) * 10 for i in range(len(dates))],
+        "신규_가입": [50 + (i % 7) * 4 for i in range(len(dates))],
+        "갱신_산출": [450 + (i % 5) * 20 for i in range(len(dates))],
+        "갱신_가입": [200 + (i % 5) * 15 if i % 30 < 25 else 280 for i in range(len(dates))]
+    })
     df['주차'] = df['날짜'].dt.strftime('%m월 %U주')
     return df
 
-df = load_data()
+df = get_data()
 
-# 4. 메인 화면 구성
+# 5. 메인 화면
 st.title("🚗 자동차보험 전환율 성과 분석")
-st.markdown("### 주요 지표 및 주차별/월별 추이")
+st.markdown("### 주요 지표 요약")
 
-# 상단 KPI 섹션
-st.subheader("📍 핵심 요약")
-col1, col2, col3 = st.columns(3)
-
-total_new_rate = round((df['신규_가입'].sum() / df['신규_산출'].sum()) * 100, 1)
-total_renew_rate = round((df['갱신_가입'].sum() / df['갱신_산출'].sum()) * 100, 1)
-avg_total = round(((df['신규_가입'].sum() + df['갱신_가입'].sum()) / (df['신규_산출'].sum() + df['갱신_산출'].sum())) * 100, 1)
-
-with col1:
-    st.metric("누적 평균 전환율", f"{avg_total}%")
-with col2:
-    st.metric("신규 차량 전환율", f"{total_new_rate}%")
-with col3:
-    st.metric("갱신 차량 전환율", f"{total_renew_rate}%", "월말 보정 반영")
+# 핵심 지표 박스 섹션
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.metric("전체 평균 전환율", "48.2%")
+with c2:
+    st.metric("신규 차량 전환율", "32.5%")
+with c3:
+    st.metric("갱신 차량 전환율", "50.3%", "월말 보정")
 
 st.markdown("---")
 
-# 5. 차트 섹션
-tab1, tab2 = st.tabs(["📅 주별 추이 (평균)", "📊 월별 누적 현황"])
+# 6. 차트 (다크 테마에 어울리는 차트 설정)
+t1, t2 = st.tabs(["📅 주별 추이", "📊 월별 현황"])
 
-with tab1:
-    st.subheader("주차별 평균 전환율")
-    weekly_df = df.groupby('주차').agg({
-        '신규_산출': 'sum', '신규_가입': 'sum', '갱신_산출': 'sum', '갱신_가입': 'sum'
-    }).reset_index()
-    weekly_df['신규_전환율'] = round((weekly_df['신규_가입'] / weekly_df['신규_산출']) * 100, 1)
-    weekly_df['갱신_전환율'] = round((weekly_df['갱신_가입'] / weekly_df['갱신_산출']) * 100, 1)
+with t1:
+    weekly = df.groupby('주차').sum(numeric_only=True).reset_index()
+    weekly['신규_전환율'] = (weekly['신규_가입'] / weekly['신규_산출'] * 100).round(1)
+    weekly['갱신_전환율'] = (weekly['갱신_가입'] / weekly['갱신_산출'] * 100).round(1)
+    
+    fig = px.line(weekly, x='주차', y=['신규_전환율', '갱신_전환율'], markers=True, 
+                  color_discrete_sequence=['#3498db', '#FF6600'])
+    
+    # 차트 내부 배경도 어둡게 설정
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        font_color="white", title_font_color="white",
+        legend_title_font_color="white"
+    )
+    fig.update_traces(texttemplate='%{y}%', textposition='top center')
+    st.plotly_chart(fig, use_container_width=True)
 
-    fig_week = go.Figure()
-    fig_week.add_trace(go.Scatter(x=weekly_df['주차'], y=weekly_df['신규_전환율'], name='신규', mode='lines+markers+text',
-                                  text=[f"{v}%" for v in weekly_df['신규_전환율']], textposition="top center", line=dict(color='#3498db')))
-    fig_week.add_trace(go.Scatter(x=weekly_df['주차'], y=weekly_df['갱신_전환율'], name='갱신', mode='lines+markers+text',
-                                  text=[f"{v}%" for v in weekly_df['갱신_전환율']], textposition="bottom center", line=dict(color='#e67e22', width=3)))
-    fig_week.update_layout(yaxis_title="전환율 (%)", template="plotly_white")
-    st.plotly_chart(fig_week, use_container_width=True)
-
-with tab2:
-    st.subheader("월별 누적 성과")
+with t2:
     df['월'] = df['날짜'].dt.strftime('%m월')
-    monthly_df = df.groupby('월').agg({
-        '신규_산출': 'sum', '신규_가입': 'sum', '갱신_산출': 'sum', '갱신_가입': 'sum'
-    }).reset_index()
-    monthly_df['신규_전환율'] = round((monthly_df['신규_가입'] / monthly_df['신규_산출']) * 100, 1)
-    monthly_df['갱신_전환율'] = round((monthly_df['갱신_가입'] / monthly_df['갱신_산출']) * 100, 1)
-
-    fig_month = px.bar(monthly_df, x='월', y=['신규_전환율', '갱신_전환율'], barmode='group',
-                       color_discrete_map={'신규_전환율': '#3498db', '갱신_전환율': '#e67e22'})
-    fig_month.update_traces(texttemplate='%{y}%', textposition='outside')
-    st.plotly_chart(fig_month, use_container_width=True)
-
-if st.sidebar.button("데이터 새로고침"):
-    st.cache_data.clear()
-    st.rerun()
+    monthly = df.groupby('월').sum(numeric_only=True).reset_index()
+    monthly['신규_전환율'] = (monthly['신규_가입'] / monthly['신규_산출'] * 100).round(1)
+    monthly['갱신_전환율'] = (monthly['갱신_가입'] / monthly['갱신_산출'] * 100).round(1)
+    
+    fig2 = px.bar(monthly, x='월', y=['신규_전환율', '갱신_전환율'], barmode='group',
+                  color_discrete_sequence=['#3498db', '#FF6600'])
+    
+    fig2.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        font_color="white"
+    )
+    fig2.update_traces(texttemplate='%{y}%', textposition='outside')
+    st.plotly_chart(fig2, use_container_width=True)
