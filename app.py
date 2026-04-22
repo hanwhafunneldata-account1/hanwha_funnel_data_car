@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 # 1. 페이지 설정
 st.set_page_config(page_title="한화손해보험 성과 대시보드", layout="wide")
 
-# 2. 강력한 CSS 스타일 (중간 회색 배경 + 우측 상단 로고 + KPI 블랙 글자)
+# 2. 강력한 CSS 스타일 (모든 텍스트 경로를 추적하여 블랙 고정)
 st.markdown("""
     <style>
     /* 전체 배경색: 중간 회색 */
@@ -22,7 +22,7 @@ st.markdown("""
         z-index: 1001;
     }
     .logo-container img {
-        width: 180px; /* 적당한 로고 크기 */
+        width: 180px;
     }
 
     /* KPI 박스: 연한 오렌지 배경 */
@@ -34,31 +34,34 @@ st.markdown("""
         box-shadow: 0 4px 10px rgba(0,0,0,0.2) !important;
     }
 
-    /* 박스 내부 모든 텍스트 블랙 강제 고정 */
-    div[data-testid="stMetricLabel"] p {
+    /* [최종 해결] 박스 내부 모든 텍스트(라벨+수치) 블랙 강제 고정 */
+    /* 1. 라벨(텍스트) 부분 */
+    div[data-testid="stMetricLabel"] > div > div > p {
         color: #000000 !important;
         font-weight: bold !important;
-        font-size: 16px !important;
+        font-size: 17px !important;
+        opacity: 1 !important;
     }
+    /* 2. 수치(%) 부분 */
     div[data-testid="stMetricValue"] > div {
         color: #000000 !important;
         font-weight: 800 !important;
-        font-size: 32px !important;
+        font-size: 35px !important;
     }
+    /* 3. 하단 델타/보조 문구 부분 */
     div[data-testid="stMetricDelta"] > div {
-        color: #E67E22 !important;
+        color: #D35400 !important;
         font-weight: bold !important;
     }
 
-    /* 메인 타이틀 및 텍스트 색상 (White) */
+    /* 메인 타이틀 및 일반 텍스트 색상 (White) */
     h1, h2, h3, .stMarkdown p, span {
         color: #FFFFFF !important;
     }
     
-    /* 탭 디자인 */
+    /* 탭 메뉴 텍스트 색상 */
     button[data-baseweb="tab"] p {
         color: #FFFFFF !important;
-        font-size: 16px !important;
     }
     </style>
     
@@ -67,7 +70,7 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# 3. 메인 타이틀 (원래 구조 유지)
+# 3. 메인 타이틀
 st.title("🚗 자동차보험 전환율 성과 분석")
 st.markdown("### 주요 지표 및 주차별/월별 추이")
 
@@ -87,7 +90,7 @@ def get_data():
 
 df = get_data()
 
-# 5. KPI 지표 섹션 (연한 오렌지 박스 + 블랙 글씨)
+# 5. KPI 지표 섹션 (연한 오렌지 박스 + 라벨/수치 블랙 고정)
 st.subheader("📍 핵심 요약")
 col1, col2, col3 = st.columns(3)
 
@@ -96,7 +99,7 @@ with col1:
 with col2:
     st.metric(label="신규 차량 전환율", value="33.4%")
 with col3:
-    st.metric(label="갱신 차량 전환율", value="52.8%", delta="보정 반영")
+    st.metric(label="갱신 차량 전환율", value="52.8%", delta="보정 완료")
 
 st.markdown("---")
 
@@ -109,7 +112,7 @@ with tab1:
     weekly['갱신_전환율'] = (weekly['갱신_가입'] / weekly['갱신_산출'] * 100).round(1)
     
     fig = px.line(weekly, x='주차', y=['신규_전환율', '갱신_전환율'], markers=True, 
-                  color_discrete_sequence=['#3498db', '#FF6600'])
+                  color_discrete_sequence=['#3498db', '#F37021'])
     fig.update_layout(
         paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', 
         font_color="white", hovermode="x unified"
@@ -124,7 +127,7 @@ with tab2:
     monthly['갱신_전환율'] = (monthly['갱신_가입'] / monthly['갱신_산출'] * 100).round(1)
     
     fig2 = px.bar(monthly, x='월', y=['신규_전환율', '갱신_전환율'], barmode='group',
-                  color_discrete_sequence=['#3498db', '#FF6600'])
+                  color_discrete_sequence=['#3498db', '#F37021'])
     fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
     fig2.update_traces(texttemplate='%{y}%', textposition='outside')
     st.plotly_chart(fig2, use_container_width=True)
