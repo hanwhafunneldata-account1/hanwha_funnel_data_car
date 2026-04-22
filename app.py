@@ -5,30 +5,45 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # 1. 페이지 설정
-st.set_page_config(page_title="자동차보험 성과 대시보드", layout="wide")
+st.set_page_config(page_title="한화손해보험 전환율 대시보드", layout="wide")
 
-# 2. 커스텀 CSS (상단 KPI 박스: 연한 오렌지 배경 + 검정 글씨)
-st.markdown("""
+# 2. 로고 및 커스텀 디자인 (우측 상단 로고 고정)
+LOGO_URL = "https://www.hanwhainsure.com/img/common/logo.png"
+
+st.markdown(f"""
     <style>
-    /* 지표 박스 스타일 */
-    [data-testid="stMetric"] {
-        background-color: #FFF5E6; /* 연한 오렌지색 */
+    /* 우측 상단 로고 배치 */
+    .logo-container {{
+        position: absolute;
+        top: -50px;
+        right: 0px;
+        z-index: 1000;
+    }}
+    .logo-container img {{
+        width: 180px; /* 로고 크기 조절 */
+    }}
+    
+    /* 지표 박스 스타일 (연한 오렌지 배경 + 검정 글씨) */
+    [data-testid="stMetric"] {{
+        background-color: #FFF5E6;
         padding: 20px;
         border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         border: 1px solid #FFE0B2;
         text-align: center;
-    }
-    /* 라벨(글씨) 색상을 강제로 검정색으로 설정 */
-    [data-testid="stMetricLabel"] {
+    }}
+    [data-testid="stMetricLabel"] {{
         color: #333333 !important;
         font-weight: bold !important;
-    }
-    /* 수치 색상을 강제로 검정색으로 설정 */
-    [data-testid="stMetricValue"] {
+    }}
+    [data-testid="stMetricValue"] {{
         color: #000000 !important;
-    }
+    }}
     </style>
+    
+    <div class="logo-container">
+        <img src="{LOGO_URL}">
+    </div>
     """, unsafe_allow_html=True)
 
 st.title("🚗 자동차보험 전환율 성과 분석")
@@ -56,7 +71,7 @@ def load_data():
 
 df = load_data()
 
-# 4. 상단 KPI 섹션 (연한 오렌지 박스 적용)
+# 4. 상단 KPI 섹션
 st.subheader("📍 핵심 요약")
 col1, col2, col3 = st.columns(3)
 
@@ -119,7 +134,6 @@ with tab2:
         title="월간 평균 전환율 비교",
         color_discrete_map={'신규_전환율': '#3498db', '갱신_전환율': '#e67e22'}
     )
-    # 안전한 레이블 표시 방식 적용
     fig_month.update_traces(texttemplate='%{y}%', textposition='outside')
     fig_month.update_layout(yaxis_title="전환율 (%)", template="plotly_white")
     st.plotly_chart(fig_month, use_container_width=True)
