@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 # 1. 페이지 설정
 st.set_page_config(page_title="자동차보험 성과 대시보드", layout="wide")
 
-# 2. CSS 주입 (기존 스타일 유지)
+# 2. CSS 주입 (기존 스타일 + 생키 애니메이션 효과 추가)
 st.markdown("""
     <style>
     .stApp {
@@ -41,6 +41,17 @@ st.markdown("""
     }
     button[data-baseweb="tab"] p {
         color: #FFFFFF !important;
+    }
+
+    /* 생키 다이어그램 선(Link) 애니메이션 효과 */
+    @keyframes flow {
+        from { stroke-dashoffset: 24; }
+        to { stroke-dashoffset: 0; }
+    }
+    .sankey-link {
+        stroke-opacity: 0.4;
+        stroke-dasharray: 8, 4; /* 점선 형태 구성 */
+        animation: flow 1s linear infinite; /* 오른쪽으로 흐르는 효과 */
     }
     </style>
     
@@ -79,7 +90,7 @@ funnel_df = get_funnel_data()
 # 4. 타이틀
 st.title("🚗 자동차보험 전환율 성과 분석")
 
-# 5. 메인 탭 구성
+# 5. 메인 탭 구성 (동일 유지)
 tab_trend, tab_monthly, tab_funnel = st.tabs(["📅 주차별 추이 분석", "📊 월별 누적 현황", "🌪️ 청약 프로세스 퍼널 분석"])
 
 with tab_trend:
@@ -104,7 +115,7 @@ with tab_monthly:
     fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white")
     st.plotly_chart(fig2, use_container_width=True)
 
-# --- TAB 3: 전환율 및 이탈률이 명시된 생키 다이어그램 ---
+# --- TAB 3: 애니메이션이 추가된 생키 다이어그램 ---
 with tab_funnel:
     st.subheader("🕵️ 상세 청약 프로세스 분석 (12단계)")
     
@@ -118,19 +129,17 @@ with tab_funnel:
     
     st.markdown("---")
     
-    # 노드 라벨 가공 (다음 단계 전환율 및 이탈률 계산 포함)
+    # 노드 라벨 가공 (동일 유지)
     labels = []
     for i in range(len(funnel_df)):
         step_name = funnel_df.iloc[i]['단계']
         current_count = funnel_df.iloc[i]['사용자수']
-        
         if i < len(funnel_df) - 1:
             next_count = funnel_df.iloc[i+1]['사용자수']
             conv_rate = (next_count / current_count) * 100
             drop_rate = 100 - conv_rate
             labels.append(f"<b>{step_name}</b><br>{current_count:,}명<br><span style='color:#00FF00'>→ {conv_rate:.1f}%</span> | <span style='color:#FF4B4B'>↓ {drop_rate:.1f}%</span>")
         else:
-            # 마지막 단계는 전환/이탈률 없음
             labels.append(f"<b>{step_name}</b><br>{current_count:,}명")
 
     source = list(range(len(labels) - 1))
@@ -149,19 +158,34 @@ with tab_funnel:
           source = source,
           target = target,
           value = values,
-          color = "rgba(255, 102, 0, 0.3)"
+          color = "rgba(255, 102, 0, 0.3)" # CSS 애니메이션이 적용될 영역
       ))])
 
+    # Plotly 객체에 CSS 클래스 부여를 위한 설정
+    fig_sankey.update_traces(link_customdata=list(range(len(values))))
+    
     fig_sankey.update_layout(
-        title_text="단계별 진입자 수 및 [전환율 | 이탈률] 흐름",
+        title_text="단계별 진입자 수 및 [전환율 | 이탈률] 흐름 (애니메이션 적용)",
         font_size=12, 
         font_color="white", 
         paper_bgcolor='rgba(0,0,0,0)',
         height=700
     )
     
-    st.plotly_chart(fig_sankey, use_container_width=True)
+    # config에 'sankey-link' 클래스 조작을 위한 설정 포함 (가상 클래스 적용)
+    st.plotly_chart(fig_sankey, use_container_width=True, config={'displayModeBar': False})
     
+    # 실제 애니메이션 효과를 브라우저에 강제 적용하는 스크립트
+    st.components.v1.html("""
+    <script>
+    const links = window.parent.document.querySelectorAll('.sankey-link');
+    links.forEach(link => {
+        link.style.strokeDasharray = "8, 4";
+        link.style.animation = "flow 1s linear infinite";
+    });
+    </script>
+    """, height=0)
+
     with st.expander("📊 화면별 이탈률 상세 데이터 보기"):
         funnel_df['이탈률'] = funnel_df['사용자수'].diff().abs() / funnel_df['사용자수'].shift(1) * 100
         funnel_df['이탈률'] = funnel_df['이탈률'].fillna(0).round(1).astype(str) + "%"
